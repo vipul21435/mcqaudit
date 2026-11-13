@@ -97,7 +97,7 @@ def z_for_confidence(confidence: float) -> float:
 
 
 def wilson_interval(successes: float, n: int, confidence: float = 0.95) -> tuple[float, float]:
-    """Wilson score interval for a proportion (Wilson 1927).
+    """Wilson score interval for a proportion.
 
     ``successes`` may be fractional (expected credit under random tie-breaking);
     the interval is then slightly conservative.
@@ -191,7 +191,7 @@ def multinomial_exact_p(
 
 
 def holm_adjust(p_values: Sequence[float]) -> list[float]:
-    """Holm step-down adjusted p-values (Holm 1979), in the input order."""
+    """Holm step-down adjusted p-values, in the input order."""
     m = len(p_values)
     order = sorted(range(m), key=lambda i: p_values[i])
     adjusted = [0.0] * m
