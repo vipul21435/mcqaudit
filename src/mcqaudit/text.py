@@ -7,6 +7,7 @@ import unicodedata
 
 _WORD = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
 _SPACE = re.compile(r"\s+")
+_SUPERSCRIPTS = str.maketrans({"\u00b9": "^1", "\u00b2": "^2", "\u00b3": "^3"})
 _NUMBER = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:/\d+)?")
 
 # A short list of English function words; overlap counts ignore them.
@@ -54,7 +55,12 @@ def parse_number(text: str) -> float | None:
     trailing percent sign or unit (``"3.5 kg"``, ``"1,200"``, ``"3/8"``). Returns
     ``None`` when the option holds no number or more than one.
     """
-    s = normalise(text).replace("−", "-").lstrip("$€£")
+    # Superscripts become "^n" before NFKC would turn them into plain digits; an exponent on a
+    # unit ("m²") is dropped, a power of the number itself ("10²") is not read as a number.
+    s = normalise(text.translate(_SUPERSCRIPTS)).replace("−", "-").lstrip("$€£")
+    if re.search(r"\d\^", s):
+        return None
+    s = re.sub(r"\^\d+", "", s)
     found = [m for m in _NUMBER.finditer(s) if m.group(0) and any(c.isdigit() for c in m.group(0))]
     if len(found) != 1:
         return None
@@ -62,7 +68,7 @@ def parse_number(text: str) -> float | None:
     if match.start() != 0:
         return None
     rest = s[match.end() :].strip()
-    if rest and not re.fullmatch(r"%|[a-zµ°/^²³ ]{1,12}", rest):
+    if rest and not re.fullmatch(r"%|[a-zµμ°/ ]{1,12}", rest):
         return None
     token = match.group(0).replace(",", "")
     if "/" in token:

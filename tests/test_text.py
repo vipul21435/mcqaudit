@@ -18,6 +18,9 @@ def test_normalise_and_words():
         ("3/8", 0.375),
         ("12 kg", 12.0),
         ("45%", 45.0),
+        ("3 \u00b5m", 3.0),
+        ("5 m\u00b2", 5.0),
+        ("2.5 cm^3", 2.5),
         ("$7", 7.0),
         ("−2", -2.0),
         (".5", 0.5),
@@ -27,7 +30,9 @@ def test_parse_number(text, value):
     assert parse_number(text) == pytest.approx(value)
 
 
-@pytest.mark.parametrize("text", ["four", "3 and 4", "between 2 and 5", "x = 3", "1/0", ""])
+@pytest.mark.parametrize(
+    "text", ["four", "10\u00b2", "3 and 4", "between 2 and 5", "x = 3", "1/0", ""]
+)
 def test_parse_number_rejects(text):
     assert parse_number(text) is None
 
