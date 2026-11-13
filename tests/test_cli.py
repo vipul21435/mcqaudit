@@ -164,3 +164,18 @@ def test_audit_reports_the_largest_stratum(tmp_path, capsys):
     assert main(["audit", str(path)]) == 0
     out = capsys.readouterr().out
     assert "The largest stratum (4 options, 40 items) alone has p 1.0000" in out
+
+
+def test_skip_unanswered_and_notes_in_reports(tmp_path, capsys):
+    rows = [{"question": "q", "choices": ["a", "b", "c"], "answer": a} for a in (1, 3, 2, 3)]
+    rows.append({"question": "q", "choices": ["a", "b", "c"]})
+    path = write_jsonl(tmp_path / "gap.jsonl", rows)
+    assert main(["audit", str(path)]) == 2
+    assert "--skip-unanswered" in capsys.readouterr().err
+    assert main(["audit", str(path), "--skip-unanswered"]) == 0
+    out = capsys.readouterr().out
+    assert "skipped 1 records without an answer" in out
+    assert "read as 1-based" in out
+    assert main(["cues", str(path), "--skip-unanswered", "--format", "json"]) == 0
+    notes = json.loads(capsys.readouterr().out)["notes"]
+    assert any("skipped 1" in n for n in notes)

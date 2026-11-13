@@ -199,6 +199,9 @@ not fix their summation order.
   languages are not handled.
 - Near-duplicate detection uses word 3-gram Jaccard on question text only, skips shingles that occur in more than
   200 questions, and checks the 20 best candidates per question; it can miss paraphrases.
+- A record without an answer stops the load unless `--skip-unanswered` is given; skipped records are counted in
+  the report. A 1-based key that never uses its last position is read as 0-based (the "auto" rule cannot tell);
+  the report then carries a note, and `--answer-base 1` fixes it.
 - `shuffle` writes the list layout in JSONL, not the input layout. Options whose meaning depends on their position
   ("both A and B", "all of the above") are moved like any other option.
 - Not implemented: Monte Carlo p-values for the runs test, a permutation null for the classifier, and model-based

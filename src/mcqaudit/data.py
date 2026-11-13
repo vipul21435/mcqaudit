@@ -247,7 +247,7 @@ def _as_int(value: Any) -> int | None:
 def _resolve_answer(raw: _Raw, base: int) -> int:
     answer = raw.answer
     if answer is None:
-        raise LoadError(f"record {raw.index + 1}: no answer field")
+        raise LoadError(f"record {raw.index + 1}: no answer field (see --skip-unanswered)")
     n = len(raw.options)
 
     if raw.labels is not None and isinstance(answer, str):
@@ -303,10 +303,20 @@ def items_from_records(
     *,
     source: str = "<records>",
     answer_base: AnswerBase = "auto",
+    skip_unanswered: bool = False,
 ) -> Dataset:
-    """Build a :class:`Dataset` from already-parsed records."""
+    """Build a :class:`Dataset` from already-parsed records.
+
+    With ``skip_unanswered`` records without an answer are dropped and counted in
+    the notes instead of stopping the load.
+    """
     raws = [_parse_record(rec, i) for i, rec in enumerate(records)]
     notes: list[str] = []
+    if skip_unanswered:
+        kept = [raw for raw in raws if raw.answer is not None]
+        if len(kept) < len(raws):
+            notes.append(f"skipped {len(raws) - len(kept)} records without an answer")
+        raws = kept
     if answer_base == "auto":
         base, note = _detect_base(raws)
         if note:
@@ -367,6 +377,17 @@ def read_records(path: str | Path, fmt: str | None = None) -> list[dict[str, Any
     raise LoadError(f"{path}: unknown format {fmt!r} (use jsonl, json, csv, tsv or parquet)")
 
 
-def load(path: str | Path, *, fmt: str | None = None, answer_base: AnswerBase = "auto") -> Dataset:
+def load(
+    path: str | Path,
+    *,
+    fmt: str | None = None,
+    answer_base: AnswerBase = "auto",
+    skip_unanswered: bool = False,
+) -> Dataset:
     """Read a multiple-choice dataset from ``path``; the format follows the extension."""
-    return items_from_records(read_records(path, fmt), source=str(path), answer_base=answer_base)
+    return items_from_records(
+        read_records(path, fmt),
+        source=str(path),
+        answer_base=answer_base,
+        skip_unanswered=skip_unanswered,
+    )

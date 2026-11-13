@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from dataclasses import asdict
@@ -43,6 +44,11 @@ def _common(parser: argparse.ArgumentParser) -> None:
         type=_answer_base,
         default="auto",
         help="whether integer answers count from 0 or 1 (default: auto)",
+    )
+    parser.add_argument(
+        "--skip-unanswered",
+        action="store_true",
+        help="drop records without an answer (counted in the report) instead of stopping",
     )
     parser.add_argument("--format", choices=("md", "json"), default="md", help="output format")
     parser.add_argument("-o", "--output", help="write the report here instead of stdout")
@@ -114,7 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _load(args: argparse.Namespace) -> Dataset:
-    return load(args.path, fmt=args.input_format, answer_base=args.answer_base)
+    return load(
+        args.path,
+        fmt=args.input_format,
+        answer_base=args.answer_base,
+        skip_unanswered=args.skip_unanswered,
+    )
 
 
 def _emit(text: str, output: str | None) -> None:
@@ -207,8 +218,19 @@ def _run(args: argparse.Namespace, ds: Dataset, parser: argparse.ArgumentParser)
         return 0
     else:  # pragma: no cover - argparse enforces the choices
         parser.error(f"unknown command {args.command}")
-    _emit(text, args.output)
+    _emit(_with_notes(text, args.format, ds.notes), args.output)
     return 0
+
+
+def _with_notes(text: str, fmt: str, notes: list[str]) -> str:
+    """Carry the loader's notes (answer base, skipped records) into the report."""
+    if not notes:
+        return text
+    if fmt == "json":
+        data = json.loads(text)
+        data["notes"] = notes
+        return to_json(data)
+    return text + "\nNotes on reading the file:\n\n" + "".join(f"- {n}\n" for n in notes)
 
 
 if __name__ == "__main__":  # pragma: no cover
