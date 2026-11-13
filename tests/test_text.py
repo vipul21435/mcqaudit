@@ -42,3 +42,17 @@ def test_ngrams_and_jaccard():
     assert char_ngrams("") == {"  "}
     assert jaccard(set(), set()) == 1.0
     assert jaccard({"a", "b"}, {"b", "c"}) == pytest.approx(1 / 3)
+
+
+def test_words_in_other_scripts():
+    assert words("हिन्दी भाषा") == ["हिन्दी", "भाषा"]
+    assert words("Ελληνικά καφέ") == ["ελληνικά", "καφέ"]
+    assert words("naïve café") == ["naïve", "café"]
+    assert words("snake_case") == ["snake", "case"]
+
+
+def test_non_latin_options_get_features():
+    from mcqaudit.choices import option_ngrams
+
+    assert option_ngrams("नीला आसमान") == ["नीला", "आसमान", "नीला आसमान"]
+    assert option_ngrams("中文") == ["中文"]

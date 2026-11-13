@@ -5,7 +5,23 @@ from __future__ import annotations
 import re
 import unicodedata
 
-_WORD = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
+
+def _mark_ranges() -> str:
+    """Character-class ranges of the combining marks (category M) in the BMP."""
+    ranges: list[tuple[int, int]] = []
+    for cp in range(0x300, 0x10000):
+        if unicodedata.category(chr(cp)).startswith("M"):
+            if ranges and ranges[-1][1] == cp - 1:
+                ranges[-1] = (ranges[-1][0], cp)
+            else:
+                ranges.append((cp, cp))
+    return "".join(f"\\u{lo:04x}-\\u{hi:04x}" for lo, hi in ranges)
+
+
+# A word is a run of letters, digits and combining marks in any script (so Devanagari vowel
+# signs stay inside their word), with inner apostrophes kept ("o'clock").
+_CHAR = rf"[^\W_]|[{_mark_ranges()}]"
+_WORD = re.compile(rf"(?:{_CHAR})+(?:'(?:{_CHAR})+)*")
 _SPACE = re.compile(r"\s+")
 _SUPERSCRIPTS = str.maketrans({"\u00b9": "^1", "\u00b2": "^2", "\u00b3": "^3"})
 _NUMBER = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:/\d+)?")

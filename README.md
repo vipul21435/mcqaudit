@@ -195,8 +195,9 @@ not fix their summation order.
 - The choices-only classifier is one fixed linear model with one C, no tuning and 4,096 hashed columns per position
   (collisions are possible); a stronger model would give a higher lower bound. Folds are grouped by subject only
   when the file has a subject field (MMLU and MedMCQA here).
-- Heuristics are fixed English patterns; the "both" pattern and the numeric parser miss many phrasings, and other
-  languages are not handled.
+- Heuristics are fixed English patterns; the "both" pattern and the numeric parser miss many phrasings, and the
+  stopword list behind the overlap heuristics is English only. Words are runs of letters, digits and combining marks
+  in any script, so text written without spaces (Chinese, Japanese) gives one token per run of characters.
 - Near-duplicate detection uses word 3-gram Jaccard on question text only, skips shingles that occur in more than
   200 questions, and checks the 20 best candidates per question; it can miss paraphrases.
 - A record without an answer stops the load unless `--skip-unanswered` is given; skipped records are counted in
