@@ -251,6 +251,7 @@ all).
   n-gram contamination checks and deduplication at corpus scale, beyond the split-overlap check here.
 - [rankstable](https://github.com/vipul21435/rankstable): how stable a leaderboard's order is to the averaging rule and the choice of benchmarks.
 - [calibcheck](https://github.com/vipul21435/calibcheck): measures how well a model's confidence matches how often it is right, with held-out recalibration checks.
+- [irtbench](https://github.com/vipul21435/irtbench): item response theory for benchmark results: which items separate models, and how small a subset of items predicts the full score.
 
 ## Licence
 
