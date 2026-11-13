@@ -64,6 +64,11 @@ def audit_markdown(audit: KeyAudit, source: str = "") -> str:
             f"Combined over option counts: chi-square {pos.statistic:.2f}, df {pos.df}, "
             f"p {_p(pos.p_value)}.",
         ]
+        main = max(pos.strata, key=lambda t: t.n)
+        lines.append(
+            f"The largest stratum ({main.n_options} options, {main.n} items) alone has "
+            f"p {_p(main.p_value)}; summing over strata is conservative when some are small."
+        )
     r = audit.runs
     lines += ["", "## Order of the key (runs test, file order)", ""]
     lines += ["| n | runs | expected | z | p |", "|---|---|---|---|---|"]

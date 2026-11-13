@@ -155,3 +155,12 @@ def test_more_than_26_options(tmp_path, capsys):
     assert "always 27" in capsys.readouterr().out
     assert main(["audit", str(path)]) == 0
     assert "| 27 |" in capsys.readouterr().out
+
+
+def test_audit_reports_the_largest_stratum(tmp_path, capsys):
+    rows = [{"question": "q", "choices": ["a", "b", "c", "d"], "answer": i % 4} for i in range(40)]
+    rows += [{"question": "q", "choices": ["a", "b", "c"], "answer": 0} for _ in range(3)]
+    path = write_jsonl(tmp_path / "mixed.jsonl", rows)
+    assert main(["audit", str(path)]) == 0
+    out = capsys.readouterr().out
+    assert "The largest stratum (4 options, 40 items) alone has p 1.0000" in out

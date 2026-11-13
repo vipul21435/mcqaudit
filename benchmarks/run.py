@@ -68,6 +68,8 @@ def run_one(name: str, path: Path, against: Path | None) -> dict:
             "statistic": audit.positions.statistic,
             "df": audit.positions.df,
             "p": audit.positions.p_value,
+            "main_stratum_p": main_stratum.p_value,
+            "strata": len(audit.positions.strata),
             "method": audit.positions.method,
             "subjects_p_holm_below_0.05": sum(s.p_holm < 0.05 for s in audit.subjects),
         },
@@ -92,9 +94,12 @@ def markdown(results: list[dict]) -> str:
     for r in results:
         b, c, pos = r["best_cue"], r["choices_only"], r["positions"]
         runs = r["runs"]
+        pos_p = fmt_p(pos["p"])
+        if pos["strata"] > 1:
+            pos_p += f" (largest stratum {fmt_p(pos['main_stratum_p'])})"
         runs_txt = "n/a" if runs["z"] is None else f"{runs['z']:+.2f} ({fmt_p(runs['p'])})"
         out.append(
-            f"| {r['name']} | {r['n']} | {pos['shares_main_stratum']} | {fmt_p(pos['p'])} "
+            f"| {r['name']} | {r['n']} | {pos['shares_main_stratum']} | {pos_p} "
             f"| {runs_txt} | {b['name']} (covers {b['covered']}) | {pct(b['accuracy'])} "
             f"({pct(b['ci_low'])} to {pct(b['ci_high'])}) | {pct(b['chance'])} "
             f"| {fmt_p(b['p_holm'])} | {pct(c['accuracy'])} "
