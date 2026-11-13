@@ -103,7 +103,8 @@ def markdown(results: list[dict]) -> str:
         )
     out += ["", "## Hygiene", ""]
     out += [
-        "| benchmark | duplicate options | empty options | duplicated questions (items) "
+        "| benchmark | duplicate options | empty options "
+        "| duplicated questions (items; all options differ) "
         "| repeated item groups | conflicting duplicates | answer in question (only answer) "
         "| option counts | overlap: exact / near (against) |",
         "|---|---|---|---|---|---|---|---|---|",
@@ -114,7 +115,8 @@ def markdown(results: list[dict]) -> str:
         ov = "n/a" if o is None else f"{o['exact']} / {o['near']} ({o['against']})"
         out.append(
             f"| {r['name']} | {h['duplicate_options']} | {h['empty_options']} "
-            f"| {h['duplicate_question_groups']} ({h['duplicate_question_items']}) "
+            f"| {h['duplicate_question_groups']} ({h['duplicate_question_items']}; "
+            f"{h['duplicate_questions_all_options_differ']}) "
             f"| {h['duplicate_item_groups']} "
             f"| {h['conflicting_duplicates']} | {h['answer_in_question']} "
             f"({h['answer_only_in_question']}) | {counts} | {ov} |"

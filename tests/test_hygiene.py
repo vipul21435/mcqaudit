@@ -51,7 +51,13 @@ def test_repeated_items_with_the_same_answer_do_not_conflict():
     assert rep.duplicate_question_groups == 1
     assert rep.duplicate_question_items == 3
     assert rep.duplicate_item_groups == 1
+    assert rep.duplicate_questions_all_options_differ == 0
     assert rep.conflicting_duplicates == 0
+    generic = hygiene(
+        [it("a", "Which is true?", ["x", "y"], 0), it("b", "which is true?", ["p", "q"], 1)]
+    )
+    assert generic.duplicate_questions_all_options_differ == 1
+    assert generic.duplicate_item_groups == 0
 
 
 def test_short_answers_do_not_count_as_leaks():
