@@ -46,20 +46,18 @@ class SparseRows:
 
     def matmul(self, w: np.ndarray) -> np.ndarray:
         """X @ w for a dense (n_cols, k) matrix ``w``."""
+        contrib = self.vals[:, None] * w[self.cols]
         out = np.empty((self.n_rows, w.shape[1]))
         for j in range(w.shape[1]):
-            out[:, j] = np.bincount(
-                self.rows, weights=self.vals * w[self.cols, j], minlength=self.n_rows
-            )
+            out[:, j] = np.bincount(self.rows, weights=contrib[:, j], minlength=self.n_rows)
         return out
 
     def rmatmul(self, r: np.ndarray) -> np.ndarray:
         """X.T @ r for a dense (n_rows, k) matrix ``r``."""
+        contrib = self.vals[:, None] * r[self.rows]
         out = np.empty((self.n_cols, r.shape[1]))
         for j in range(r.shape[1]):
-            out[:, j] = np.bincount(
-                self.cols, weights=self.vals * r[self.rows, j], minlength=self.n_cols
-            )
+            out[:, j] = np.bincount(self.cols, weights=contrib[:, j], minlength=self.n_cols)
         return out
 
 
@@ -131,13 +129,22 @@ def lbfgs(
 class SoftmaxRegression:
     """L2-penalised multinomial logistic regression with an unpenalised intercept."""
 
-    def __init__(self, n_classes: int, *, C: float = 1.0, max_iter: int = 500, tol: float = 1e-6):
+    def __init__(
+        self,
+        n_classes: int,
+        *,
+        C: float = 1.0,
+        max_iter: int = 500,
+        tol: float = 1e-6,
+        ftol: float = 1e-10,
+    ):
         if n_classes < 2:
             raise ValueError("need at least two classes")
         self.n_classes = n_classes
         self.C = C
         self.max_iter = max_iter
         self.tol = tol
+        self.ftol = ftol
         self.coef_: np.ndarray | None = None
         self.intercept_: np.ndarray | None = None
         self.n_iter_ = 0
@@ -173,7 +180,7 @@ class SoftmaxRegression:
             return float(loss), np.concatenate([grad_w.ravel(), grad_b])
 
         theta, self.n_iter_ = lbfgs(
-            objective, np.zeros(d * k + k), max_iter=self.max_iter, gtol=self.tol
+            objective, np.zeros(d * k + k), max_iter=self.max_iter, gtol=self.tol, ftol=self.ftol
         )
         self.coef_ = theta[: d * k].reshape(d, k)
         self.intercept_ = theta[d * k :]
