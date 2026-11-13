@@ -103,7 +103,7 @@ def markdown(results: list[dict]) -> str:
     out += ["", "## Hygiene", ""]
     out += [
         "| benchmark | duplicate options | empty options | duplicated questions (items) "
-        "| repeated items | conflicting duplicates | answer in question (only answer) "
+        "| repeated item groups | conflicting duplicates | answer in question (only answer) "
         "| option counts | overlap: exact / near (against) |",
         "|---|---|---|---|---|---|---|---|---|",
     ]

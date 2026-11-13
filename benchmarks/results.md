@@ -9,12 +9,12 @@
 
 ## Hygiene
 
-| benchmark | duplicate options | empty options | duplicated questions (items) | conflicting duplicates | answer in question (only answer) | option counts | overlap: exact / near (against) |
-|---|---|---|---|---|---|---|---|
-| MMLU test | 14 | 0 | 155 (331) | 0 | 92 (41) | 4: 14042 | 48 / 190 (validation.parquet) |
-| ARC-Challenge test | 1 | 0 | 2 (4) | 0 | 5 (0) | 3: 4, 4: 1165, 5: 3 | 7 / 8 (challenge-train.parquet) |
-| CommonsenseQA validation | 24 | 0 | 0 (0) | 0 | 0 (0) | 5: 1221 | 0 / 0 (train.parquet) |
-| MedMCQA validation | 21 | 0 | 0 (0) | 0 | 7 (5) | 4: 4183 | 0 / 25 (train.parquet) |
+| benchmark | duplicate options | empty options | duplicated questions (items) | repeated item groups | conflicting duplicates | answer in question (only answer) | option counts | overlap: exact / near (against) |
+|---|---|---|---|---|---|---|---|---|
+| MMLU test | 14 | 0 | 155 (331) | 110 | 0 | 92 (41) | 4: 14042 | 48 / 190 (validation.parquet) |
+| ARC-Challenge test | 1 | 0 | 2 (4) | 0 | 0 | 5 (0) | 3: 4, 4: 1165, 5: 3 | 7 / 8 (challenge-train.parquet) |
+| CommonsenseQA validation | 24 | 0 | 0 (0) | 0 | 0 | 0 (0) | 5: 1221 | 0 / 0 (train.parquet) |
+| MedMCQA validation | 21 | 0 | 0 (0) | 0 | 0 | 7 (5) | 4: 4183 | 0 / 25 (train.parquet) |
 
 ## Every heuristic
 
