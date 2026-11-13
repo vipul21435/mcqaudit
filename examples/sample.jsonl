@@ -1,0 +1,20 @@
+{"id": "ex-01", "subject": "arithmetic", "question": "What is 7 times 8?", "choices": ["54", "58", "56", "64"], "answer": 2}
+{"id": "ex-02", "subject": "arithmetic", "question": "What is 144 divided by 12?", "choices": ["11", "14", "12 exactly", "13"], "answer": 2}
+{"id": "ex-03", "subject": "arithmetic", "question": "Which number is prime?", "choices": ["21", "23", "27", "33"], "answer": 1}
+{"id": "ex-04", "subject": "arithmetic", "question": "What is half of 3/4?", "choices": ["3/2", "1/4", "3/8, half of three quarters", "1/8"], "answer": 2}
+{"id": "ex-05", "subject": "arithmetic", "question": "What is 15 percent of 200?", "choices": ["30", "25", "35", "20"], "answer": 0}
+{"id": "ex-06", "subject": "arithmetic", "question": "What is the square root of 81?", "choices": ["8", "10", "9, since 9 times 9 is 81", "7"], "answer": 2}
+{"id": "ex-07", "subject": "arithmetic", "question": "What is 2 to the power 5?", "choices": ["16", "64", "25", "32"], "answer": 3}
+{"id": "ex-08", "subject": "arithmetic", "question": "What is 0.5 plus 0.25?", "choices": ["0.30", "0.70", "0.75, three quarters", "1.0"], "answer": 2}
+{"id": "ex-09", "subject": "arithmetic", "question": "How many minutes are in three hours?", "choices": ["120", "160", "180 minutes in total", "200"], "answer": 2}
+{"id": "ex-10", "subject": "arithmetic", "question": "What is 9 minus 13?", "choices": ["4", "-4", "-5", "5"], "answer": 1}
+{"id": "ex-11", "subject": "geography", "question": "Which river flows through Cairo?", "choices": ["Tigris", "Danube", "The Nile, the longest river in Africa", "Volga"], "answer": 2}
+{"id": "ex-12", "subject": "geography", "question": "What is the capital of Canada?", "choices": ["Ottawa", "Toronto", "Vancouver", "Montreal"], "answer": 0}
+{"id": "ex-13", "subject": "geography", "question": "Which ocean lies west of Portugal?", "choices": ["Indian", "Arctic", "The Atlantic Ocean", "Pacific"], "answer": 2}
+{"id": "ex-14", "subject": "geography", "question": "Which desert covers much of northern Africa?", "choices": ["Gobi", "Kalahari", "The Sahara Desert", "Atacama"], "answer": 2}
+{"id": "ex-15", "subject": "geography", "question": "Which country has the city of Kyoto?", "choices": ["China", "Japan", "Korea", "Vietnam"], "answer": 1}
+{"id": "ex-16", "subject": "geography", "question": "Which mountain range separates Europe and Asia?", "choices": ["Alps", "Andes", "The Ural Mountains", "Rockies"], "answer": 2}
+{"id": "ex-17", "subject": "geography", "question": "Which continent is Kenya in?", "choices": ["Asia", "Europe", "South America", "Africa"], "answer": 3}
+{"id": "ex-18", "subject": "geography", "question": "What is the largest island in the Mediterranean?", "choices": ["Crete", "Corsica", "Sicily, south of mainland Italy", "Cyprus"], "answer": 2}
+{"id": "ex-19", "subject": "geography", "question": "Which city stands on the Bosporus?", "choices": ["Istanbul", "Athens", "Rome", "Sofia"], "answer": 0}
+{"id": "ex-20", "subject": "geography", "question": "Which lake is the deepest in the world?", "choices": ["Superior", "Victoria", "Lake Baikal in Siberia", "Tanganyika"], "answer": 2}
