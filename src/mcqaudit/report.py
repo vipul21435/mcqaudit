@@ -7,8 +7,10 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any
 
+from .choices import ChoicesOnlyResult
 from .cues import CueResult
 from .data import LETTERS
+from .hygiene import HygieneReport, OverlapReport
 from .keyaudit import KeyAudit, PositionTest
 
 
@@ -131,3 +133,64 @@ def cues_dict(results: Sequence[CueResult]) -> list[dict[str, Any]]:
 
 def to_json(data: Any) -> str:
     return json.dumps(data, indent=2, sort_keys=False) + "\n"
+
+
+def choices_markdown(res: ChoicesOnlyResult, source: str = "", confidence: float = 0.95) -> str:
+    level = f"{100 * confidence:g} %"
+    lines = [f"# Choices-only classifier{': ' + source if source else ''}", ""]
+    lines += [
+        f"Multinomial logistic regression on hashed word 1-2 grams of the options "
+        f"({res.n_features} columns per position, C = {res.C:g}); the question is never read. "
+        f"{res.n_folds} folds, {res.folds}.",
+        "",
+        f"| items | correct | accuracy | {level} interval | chance | lift | z | p (one-sided) "
+        "| majority position |",
+        "|---|---|---|---|---|---|---|---|---|",
+        f"| {res.n_items} | {res.correct} | {_pct(res.accuracy)} | {_pct(res.ci_low)} to "
+        f"{_pct(res.ci_high)} | {_pct(res.chance)} | {100 * res.lift:+.1f} pt | {_z(res.z)} | "
+        f"{_p(res.p_value)} | {_pct(res.majority_accuracy)} |",
+        "",
+        "Majority position: accuracy of always picking the training folds' most common position.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def choices_dict(res: ChoicesOnlyResult) -> dict[str, Any]:
+    row = asdict(res)
+    row["lift"] = res.lift
+    return row
+
+
+def hygiene_markdown(
+    rep: HygieneReport, overlap: OverlapReport | None = None, source: str = ""
+) -> str:
+    lines = [f"# Item hygiene{': ' + source if source else ''}", ""]
+    counts = ", ".join(f"{k} options: {v}" for k, v in rep.option_counts.items())
+    rows = [
+        ("items", rep.n_items),
+        ("items with duplicate options", rep.duplicate_options),
+        ("items with an empty option", rep.empty_options),
+        ("duplicated questions (groups)", rep.duplicate_question_groups),
+        ("items in those groups", rep.duplicate_question_items),
+        ("groups giving different answers to the same options", rep.conflicting_duplicates),
+        ("answer text appears in the question", rep.answer_in_question),
+        ("... and no distractor does", rep.answer_only_in_question),
+        ("items off the usual option count", rep.off_mode_option_count),
+    ]
+    lines += ["| check | count |", "|---|---|"]
+    lines += [f"| {name} | {value} |" for name, value in rows]
+    lines += ["", f"Option counts: {counts}."]
+    if rep.examples:
+        lines += ["", "Example ids:", ""]
+        for kind, ids in rep.examples.items():
+            lines.append(f"- {kind.replace('_', ' ')}: {', '.join(ids)}")
+    if overlap is not None:
+        lines += [
+            "",
+            "## Overlap with the other file",
+            "",
+            f"Of {overlap.n_b} questions here, {overlap.exact} match a question of the other file "
+            f"({overlap.n_a} questions) exactly after normalisation and {overlap.near} have word "
+            f"3-gram Jaccard similarity of at least {overlap.threshold:g}.",
+        ]
+    return "\n".join(lines) + "\n"

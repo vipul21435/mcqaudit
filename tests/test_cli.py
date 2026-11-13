@@ -81,3 +81,40 @@ def test_version(capsys):
         main(["--version"])
     assert exc.value.code == 0
     assert "mcqaudit" in capsys.readouterr().out
+
+
+def test_choices_only_command(small, capsys):
+    assert main(["choices-only", str(small), "--folds", "2", "--features", "64"]) == 0
+    out = capsys.readouterr().out
+    assert "# Choices-only classifier" in out
+    assert main(["choices-only", str(small), "--folds", "3", "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["n_items"] == 12 and data["n_folds"] == 3
+
+
+def test_hygiene_command_with_against(small, tmp_path, capsys):
+    other = write_jsonl(
+        tmp_path / "other.jsonl",
+        [{"question": "q3", "choices": ["x", "y"], "answer": 0}],
+    )
+    assert main(["hygiene", str(small), "--against", str(other)]) == 0
+    out = capsys.readouterr().out
+    assert "## Overlap with the other file" in out
+    assert "1 match a question of the other file" in out
+    assert main(["hygiene", str(small), "--against", str(other), "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["overlap"]["exact"] == 1
+    assert main(["hygiene", str(small), "--against", str(tmp_path / "nope.jsonl")]) == 2
+
+
+def test_shuffle_command(small, tmp_path, capsys):
+    out = tmp_path / "shuffled.jsonl"
+    assert main(["shuffle", str(small), "-o", str(out), "--seed", "1"]) == 0
+    assert "wrote 12 items" in capsys.readouterr().err
+    original = [json.loads(line) for line in small.read_text().splitlines()]
+    shuffled = [json.loads(line) for line in out.read_text().splitlines()]
+    for a, b in zip(original, shuffled, strict=True):
+        assert a["choices"][a["answer"]] == b["choices"][b["answer"]]
+    bal = tmp_path / "balanced.jsonl"
+    assert main(["shuffle", str(small), "-o", str(bal), "--balanced"]) == 0
+    assert main(["shuffle", str(small)]) == 2
