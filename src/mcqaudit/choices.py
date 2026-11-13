@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 import random
+import warnings
 import zlib
 from collections import Counter, defaultdict
 from collections.abc import Sequence
@@ -51,7 +52,7 @@ def featurise(items: Sequence[Item], n_features: int = 2**12, max_n: int = 2) ->
     for i, item in enumerate(items):
         for j, option in enumerate(item.options):
             counts: dict[int, float] = defaultdict(float)
-            for gram in set(option_ngrams(option, max_n)):
+            for gram in sorted(set(option_ngrams(option, max_n))):
                 h = cache.get(gram)
                 if h is None:
                     h = zlib.crc32(gram.encode("utf-8"))
@@ -110,6 +111,8 @@ class ChoicesOnlyResult:
     majority_accuracy: float
     n_features: int
     C: float
+    max_iter: int = 0
+    folds_at_iteration_cap: int = 0
 
     @property
     def lift(self) -> float:
@@ -126,7 +129,7 @@ def choices_only(
     max_n: int = 2,
     group: str = "subject",
     confidence: float = 0.95,
-    max_iter: int = 100,
+    max_iter: int = 300,
     ftol: float = 1e-6,
 ) -> ChoicesOnlyResult:
     """Cross-validated accuracy of a classifier that sees only the options."""
@@ -144,6 +147,7 @@ def choices_only(
 
     pred = np.full(n, -1)
     majority_hits = 0
+    at_cap = 0
     for f in range(n_folds):
         test = np.flatnonzero(fold_arr == f)
         train = np.flatnonzero(fold_arr != f)
@@ -151,10 +155,18 @@ def choices_only(
             continue
         model = SoftmaxRegression(width, C=C, max_iter=max_iter, ftol=ftol)
         model.fit(x.take(train), y[train], mask[train])
+        at_cap += not model.converged_
         pred[test] = model.predict(x.take(test), mask[test])
         top = Counter(y[train].tolist()).most_common(1)[0][0]
         majority_hits += int(np.sum(y[test] == top))
 
+    if at_cap:
+        warnings.warn(
+            f"L-BFGS stopped at max_iter={max_iter} in {at_cap} of {n_folds} folds "
+            "before converging; raise max_iter for the optimum",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     correct = int(np.sum(pred == y))
     ks = np.array([it.n_options for it in items], dtype=float)
     chance_sum = float(np.sum(1.0 / ks))
@@ -175,4 +187,6 @@ def choices_only(
         majority_accuracy=majority_hits / n,
         n_features=n_features,
         C=C,
+        max_iter=max_iter,
+        folds_at_iteration_cap=at_cap,
     )

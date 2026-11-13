@@ -75,10 +75,11 @@ def lbfgs(
     memory: int = 10,
     gtol: float = 1e-6,
     ftol: float = 1e-10,
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int, bool]:
     """Minimise ``fun`` (returning value and gradient) by L-BFGS with Armijo backtracking.
 
-    Returns the minimiser and the number of iterations used.
+    Returns the minimiser, the number of iterations used and whether a stopping
+    rule (gradient or relative change) was met before ``max_iter``.
     """
     x = x0.astype(float).copy()
     f, g = fun(x)
@@ -86,7 +87,7 @@ def lbfgs(
     y_hist: list[np.ndarray] = []
     for it in range(1, max_iter + 1):
         if np.max(np.abs(g)) < gtol:
-            return x, it - 1
+            return x, it - 1, True
         q = g.copy()
         alphas = []
         for s, y in zip(reversed(s_hist), reversed(y_hist), strict=True):
@@ -122,8 +123,8 @@ def lbfgs(
         converged = abs(f - f_new) <= ftol * max(1.0, abs(f))
         x, f, g = x_new, f_new, g_new
         if converged:
-            return x, it
-    return x, max_iter
+            return x, it, True
+    return x, max_iter, False
 
 
 class SoftmaxRegression:
@@ -148,6 +149,7 @@ class SoftmaxRegression:
         self.coef_: np.ndarray | None = None
         self.intercept_: np.ndarray | None = None
         self.n_iter_ = 0
+        self.converged_ = False
 
     def _masked(self, z: np.ndarray, mask: np.ndarray | None) -> np.ndarray:
         if mask is None:
@@ -179,7 +181,7 @@ class SoftmaxRegression:
             grad_b = resid.sum(axis=0)
             return float(loss), np.concatenate([grad_w.ravel(), grad_b])
 
-        theta, self.n_iter_ = lbfgs(
+        theta, self.n_iter_, self.converged_ = lbfgs(
             objective, np.zeros(d * k + k), max_iter=self.max_iter, gtol=self.tol, ftol=self.ftol
         )
         self.coef_ = theta[: d * k].reshape(d, k)

@@ -63,9 +63,11 @@ def test_lbfgs_on_a_quadratic():
         d = v - target
         return float(0.5 * d @ a @ d), a @ d
 
-    x, iters = lbfgs(f, np.zeros(3), gtol=1e-10)
+    x, iters, converged = lbfgs(f, np.zeros(3), gtol=1e-10)
     assert np.allclose(x, target, atol=1e-7)
-    assert iters < 50
+    assert iters < 50 and converged
+    _, iters, converged = lbfgs(f, np.zeros(3), gtol=1e-30, ftol=0.0, max_iter=2)
+    assert iters == 2 and not converged
 
 
 def test_errors():

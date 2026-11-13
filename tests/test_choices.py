@@ -93,3 +93,50 @@ def test_mixed_option_counts_are_masked():
 def test_rejects_too_few_items():
     with pytest.raises(ValueError):
         choices_only([Item("a", "q", ("x", "y"), 0)], n_folds=5)
+
+
+DETERMINISM_SCRIPT = """
+import random, sys
+from mcqaudit.choices import choices_only, featurise
+from mcqaudit.data import Item
+rng = random.Random(8)
+words = ["alpha beta", "gamma", "delta epsilon zeta", "eta theta", "iota kappa lambda"]
+items = [
+    Item(f"q{i}", "q", tuple(rng.choice(words) + f" w{rng.randrange(30)}" for _ in range(4)),
+         rng.randrange(4), f"s{i % 5}")
+    for i in range(150)
+]
+x = featurise(items, 256)
+res = choices_only(items, n_features=256, max_iter=40)
+print(sum(i * c for i, c in enumerate(x.cols.tolist())), res.correct)
+"""
+
+
+def test_results_do_not_depend_on_the_hash_seed():
+    import os
+    import subprocess
+    import sys
+
+    outputs = set()
+    for seed in ("1", "2"):
+        env = dict(os.environ, PYTHONHASHSEED=seed, OMP_NUM_THREADS="1")
+        out = subprocess.run(
+            [sys.executable, "-c", DETERMINISM_SCRIPT],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        outputs.add(out)
+    assert len(outputs) == 1
+
+
+def test_iteration_cap_is_reported():
+    rng = random.Random(3)
+    items = [_item(rng, i, plant=True) for i in range(60)]
+    with pytest.warns(RuntimeWarning, match="max_iter=2"):
+        res = choices_only(items, n_folds=3, n_features=128, max_iter=2)
+    assert res.folds_at_iteration_cap == 3
+    from mcqaudit.report import choices_markdown
+
+    assert "Warning: L-BFGS stopped at its cap" in choices_markdown(res)

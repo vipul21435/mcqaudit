@@ -152,6 +152,13 @@ def choices_markdown(res: ChoicesOnlyResult, source: str = "", confidence: float
         "",
         "Majority position: accuracy of always picking the training folds' most common position.",
     ]
+    if res.folds_at_iteration_cap:
+        lines += [
+            "",
+            f"Warning: L-BFGS stopped at its cap of {res.max_iter} iterations in "
+            f"{res.folds_at_iteration_cap} of {res.n_folds} folds, short of the optimum; "
+            "raise --max-iter.",
+        ]
     return "\n".join(lines) + "\n"
 
 

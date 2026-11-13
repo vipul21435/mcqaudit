@@ -84,7 +84,9 @@ def build_parser() -> argparse.ArgumentParser:
     co.add_argument(
         "--features", type=int, default=2**12, help="hashed columns per position (default 4096)"
     )
-    co.add_argument("--max-iter", type=int, default=100, help="L-BFGS iterations per fold")
+    co.add_argument(
+        "--max-iter", type=int, default=300, help="most L-BFGS iterations per fold (default 300)"
+    )
     co.add_argument(
         "--group",
         choices=("subject", "none"),
