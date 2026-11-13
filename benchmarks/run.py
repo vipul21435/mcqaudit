@@ -18,7 +18,7 @@ from pathlib import Path
 
 from mcqaudit.choices import choices_only
 from mcqaudit.cues import evaluate_all
-from mcqaudit.data import LETTERS, load
+from mcqaudit.data import load, position_label
 from mcqaudit.hygiene import hygiene, split_overlap
 from mcqaudit.keyaudit import audit_key
 
@@ -56,7 +56,7 @@ def run_one(name: str, path: Path, against: Path | None) -> dict:
     if against is not None and against.exists():
         ov = split_overlap(load(against).items, items)
     main_stratum = max(audit.positions.strata, key=lambda s: s.n)
-    shares = ", ".join(f"{LETTERS[j]} {pct(s)}" for j, s in enumerate(main_stratum.shares))
+    shares = ", ".join(f"{position_label(j)} {pct(s)}" for j, s in enumerate(main_stratum.shares))
     return {
         "name": name,
         "file": str(path.relative_to(path.parent.parent)),

@@ -26,7 +26,7 @@ from collections.abc import Hashable, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 
-from .data import LETTERS, Item
+from .data import Item, position_label
 from .stats import (
     chi2_sf,
     chi_square_statistic,
@@ -59,7 +59,7 @@ class PositionTest:
     @property
     def top_position(self) -> str:
         best = max(range(self.n_options), key=lambda j: self.counts[j])
-        return LETTERS[best]
+        return position_label(best)
 
 
 @dataclass

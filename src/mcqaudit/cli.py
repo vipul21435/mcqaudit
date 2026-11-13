@@ -135,6 +135,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     for note in ds.notes:
         print(f"mcqaudit: {note}", file=sys.stderr)
 
+    try:
+        return _run(args, ds, parser)
+    except (LoadError, ValueError, OSError) as exc:
+        print(f"mcqaudit: {exc}", file=sys.stderr)
+        return 2
+
+
+def _run(args: argparse.Namespace, ds: Dataset, parser: argparse.ArgumentParser) -> int:
     if args.command == "audit":
         result = audit_key(
             ds.items,
@@ -171,11 +179,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         rep = hygiene(ds.items)
         overlap = None
         if args.against:
-            try:
-                other = load(args.against, fmt=args.input_format, answer_base=args.answer_base)
-            except (LoadError, OSError) as exc:
-                print(f"mcqaudit: {exc}", file=sys.stderr)
-                return 2
+            other = load(args.against, fmt=args.input_format, answer_base=args.answer_base)
             overlap = split_overlap(other.items, ds.items, threshold=args.threshold)
         if args.format == "json":
             data = {"source": ds.source, **asdict(rep)}

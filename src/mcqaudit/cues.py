@@ -21,7 +21,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from .data import LETTERS, Item
+from .data import Item, position_label
 from .stats import credit_upper_p, holm_adjust, normal_upper_p, wilson_interval
 from .text import char_ngrams, content_words, jaccard, normalise, parse_number
 
@@ -55,8 +55,8 @@ def position(k: int) -> Heuristic:
     def pick(item: Item) -> frozenset[int]:
         return frozenset({k}) if k < item.n_options else frozenset()
 
-    pick.__name__ = f"position_{LETTERS[k]}"
-    pick.__doc__ = f"Always option {LETTERS[k]}."
+    pick.__name__ = f"position_{position_label(k)}"
+    pick.__doc__ = f"Always option {position_label(k)}."
     return pick
 
 
@@ -133,7 +133,7 @@ def odd_one_out(item: Item) -> frozenset[int]:
 def default_heuristics(max_options: int) -> dict[str, Heuristic]:
     """The fixed set of heuristics, named as they appear in reports."""
     table: dict[str, Heuristic] = {
-        f"always {LETTERS[k]}": position(k) for k in range(max(max_options, 2))
+        f"always {position_label(k)}": position(k) for k in range(max(max_options, 2))
     }
     table["longest option"] = longest
     table["shortest option"] = shortest

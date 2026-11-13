@@ -28,6 +28,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+import unicodedata
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,6 +44,11 @@ ID_KEYS = ("id", "qid", "item_id", "question_id")
 _OPTION_COLUMN = re.compile(r"^(?:option|op|choice)[ _-]?([a-z]|\d{1,2})$", re.IGNORECASE)
 
 AnswerBase = Literal["auto", 0, 1]
+
+
+def position_label(j: int) -> str:
+    """Letter for 0-based position ``j`` (A to Z), then 27, 28, ... beyond Z."""
+    return LETTERS[j] if 0 <= j < len(LETTERS) else str(j + 1)
 
 
 class LoadError(ValueError):
@@ -72,7 +78,7 @@ class Item:
 
     @property
     def answer_letter(self) -> str:
-        return LETTERS[self.answer]
+        return position_label(self.answer)
 
 
 @dataclass
@@ -189,7 +195,7 @@ def _parse_record(record: Mapping[str, Any], index: int) -> _Raw:
         value = _maybe_json_list(record[key])
         if isinstance(value, Mapping) and "text" in value:
             texts = list(value["text"])
-            labels = list(value.get("label") or LETTERS[: len(texts)])
+            labels = list(value.get("label") or [position_label(j) for j in range(len(texts))])
             if len(labels) != len(texts):
                 raise LoadError(f"record {index + 1}: {key}.text and {key}.label differ in length")
             return _Raw(
@@ -253,10 +259,15 @@ def _resolve_answer(raw: _Raw, base: int) -> int:
             return upper.index(stripped.upper())
 
     as_int = _as_int(answer)
+    letter = (
+        unicodedata.normalize("NFKC", answer).strip().upper() if isinstance(answer, str) else ""
+    )
     if as_int is not None:
         idx = as_int - base
-    elif isinstance(answer, str) and len(answer.strip()) == 1 and answer.strip().isalpha():
-        idx = LETTERS.index(answer.strip().upper())
+    elif len(letter) == 1 and letter.isalpha():
+        if letter not in LETTERS:
+            raise LoadError(f"record {raw.index + 1}: answer letter {answer!r} is not A to Z")
+        idx = LETTERS.index(letter)
     elif isinstance(answer, str) and answer in raw.options:
         idx = raw.options.index(answer)
     else:

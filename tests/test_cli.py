@@ -118,3 +118,40 @@ def test_shuffle_command(small, tmp_path, capsys):
     bal = tmp_path / "balanced.jsonl"
     assert main(["shuffle", str(small), "-o", str(bal), "--balanced"]) == 0
     assert main(["shuffle", str(small)]) == 2
+
+
+@pytest.mark.parametrize("command", ["audit", "cues", "choices-only", "hygiene"])
+def test_bad_answer_letter_is_an_error_line(tmp_path, capsys, command):
+    path = write_jsonl(
+        tmp_path / "x.jsonl", [{"question": "q", "choices": ["a", "b"], "answer": "É"}]
+    )
+    assert main([command, str(path)]) == 2
+    assert "not A to Z" in capsys.readouterr().err
+
+
+def test_fullwidth_letter_is_read(tmp_path, capsys):
+    path = write_jsonl(
+        tmp_path / "x.jsonl", [{"question": "q", "choices": ["a", "b"], "answer": "Ｂ"}]
+    )
+    assert main(["audit", str(path), "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out)["positions"]["strata"][0]["counts"] == [0, 1]
+
+
+def test_choices_only_on_tiny_files_exits_with_2(tmp_path, capsys):
+    one = write_jsonl(
+        tmp_path / "one.jsonl", [{"question": "q", "choices": ["a", "b"], "answer": 0}]
+    )
+    assert main(["choices-only", str(one)]) == 2
+    assert "folds" in capsys.readouterr().err
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("")
+    assert main(["choices-only", str(empty)]) == 2
+
+
+def test_more_than_26_options(tmp_path, capsys):
+    opts = [f"option {j}" for j in range(27)]
+    path = write_jsonl(tmp_path / "wide.jsonl", [{"question": "q", "choices": opts, "answer": 26}])
+    assert main(["cues", str(path)]) == 0
+    assert "always 27" in capsys.readouterr().out
+    assert main(["audit", str(path)]) == 0
+    assert "| 27 |" in capsys.readouterr().out

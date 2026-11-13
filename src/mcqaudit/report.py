@@ -9,7 +9,7 @@ from typing import Any
 
 from .choices import ChoicesOnlyResult
 from .cues import CueResult
-from .data import LETTERS
+from .data import position_label
 from .hygiene import HygieneReport, OverlapReport
 from .keyaudit import KeyAudit, PositionTest
 
@@ -49,7 +49,11 @@ def audit_markdown(audit: KeyAudit, source: str = "") -> str:
     lines = [f"# Answer-key audit{': ' + source if source else ''}", ""]
     lines.append(f"Items: {audit.n_items}")
     lines += ["", "## Answer positions", ""]
-    header = "| options | n | " + " | ".join(LETTERS[:width]) + " | chi-square | df | p | method |"
+    header = (
+        "| options | n | "
+        + " | ".join(position_label(j) for j in range(width))
+        + " | chi-square | df | p | method |"
+    )
     lines += [header, "|" + "---|" * (width + 6)]
     for stratum in audit.positions.strata:
         lines.append(_position_row(stratum, width))
@@ -80,7 +84,7 @@ def audit_markdown(audit: KeyAudit, source: str = "") -> str:
         for s in audit.subjects:
             stratum = max(s.positions.strata, key=lambda t: t.n)
             top = stratum.top_position
-            share = stratum.shares[LETTERS.index(top)]
+            share = max(stratum.shares)
             lines.append(
                 f"| {s.subject} | {s.n} | {top} | {_pct(share)} | {_p(s.positions.p_value)} | "
                 f"{_p(s.p_holm)} | {_z(s.runs.z)} |"
