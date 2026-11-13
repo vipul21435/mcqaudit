@@ -85,9 +85,9 @@ def markdown(results: list[dict]) -> str:
     out = ["# mcqaudit on public benchmarks", ""]
     out += [
         "| benchmark | items | answer positions | position test p | runs z (p) "
-        "| best heuristic | its accuracy (95 % CI) | chance | choices-only accuracy (95 % CI) "
-        "| majority position |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| best heuristic | its accuracy (95 % CI) | chance | p (Holm) "
+        "| choices-only accuracy (95 % CI) | majority position |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         b, c, pos = r["best_cue"], r["choices_only"], r["positions"]
@@ -97,7 +97,8 @@ def markdown(results: list[dict]) -> str:
             f"| {r['name']} | {r['n']} | {pos['shares_main_stratum']} | {fmt_p(pos['p'])} "
             f"| {runs_txt} | {b['name']} (covers {b['covered']}) | {pct(b['accuracy'])} "
             f"({pct(b['ci_low'])} to {pct(b['ci_high'])}) | {pct(b['chance'])} "
-            f"| {pct(c['accuracy'])} ({pct(c['ci_low'])} to {pct(c['ci_high'])}), chance "
+            f"| {fmt_p(b['p_holm'])} | {pct(c['accuracy'])} "
+            f"({pct(c['ci_low'])} to {pct(c['ci_high'])}), chance "
             f"{pct(c['chance'])}, {c['folds']} | {pct(c['majority_accuracy'])} |"
         )
     out += ["", "## Hygiene", ""]
@@ -123,15 +124,16 @@ def markdown(results: list[dict]) -> str:
         out += [
             f"### {r['name']}",
             "",
-            "| heuristic | covered | accuracy | 95 % CI | chance |",
-            "|---|---|---|---|---|",
+            "| heuristic | covered | accuracy | 95 % CI | chance | p | p (Holm) |",
+            "|---|---|---|---|---|---|---|",
         ]
         for c in r["cues"]:
             if c["covered"] == 0:
                 continue
             out.append(
                 f"| {c['name']} | {c['covered']} | {pct(c['accuracy'])} | {pct(c['ci_low'])} to "
-                f"{pct(c['ci_high'])} | {pct(c['chance'])} |"
+                f"{pct(c['ci_high'])} | {pct(c['chance'])} | {fmt_p(c['p_value'])} "
+                f"| {fmt_p(c['p_holm'])} |"
             )
         out.append("")
     return "\n".join(out)

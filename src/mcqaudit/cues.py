@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from .data import LETTERS, Item
-from .stats import credit_upper_p, normal_upper_p, wilson_interval
+from .stats import credit_upper_p, holm_adjust, normal_upper_p, wilson_interval
 from .text import char_ngrams, content_words, jaccard, normalise, parse_number
 
 Heuristic = Callable[[Item], frozenset[int]]
@@ -161,6 +161,7 @@ class CueResult:
     z: float | None
     p_value: float | None
     p_exact: bool = False
+    p_holm: float | None = None
 
     @property
     def lift(self) -> float:
@@ -213,9 +214,12 @@ def evaluate_all(
     *,
     confidence: float = 0.95,
 ) -> list[CueResult]:
-    """Score every heuristic, best lift first."""
+    """Score every heuristic, best lift first, with Holm-adjusted p-values across them."""
     if heuristics is None:
         heuristics = default_heuristics(max((i.n_options for i in items), default=4))
     results = [evaluate(items, n, h, confidence=confidence) for n, h in heuristics.items()]
+    tested = [r for r in results if r.p_value is not None]
+    for r, adj in zip(tested, holm_adjust([r.p_value for r in tested]), strict=True):  # type: ignore[misc]
+        r.p_holm = adj
     results.sort(key=lambda r: (r.covered == 0, -r.lift))
     return results

@@ -93,23 +93,26 @@ def cues_markdown(results: Sequence[CueResult], source: str = "", confidence: fl
     level = f"{100 * confidence:g} %"
     lines += [
         f"| heuristic | covered | accuracy | {level} interval | chance | lift | z "
-        "| p (one-sided) |",
-        "|---|---|---|---|---|---|---|---|",
+        "| p (one-sided) | p (Holm) |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         if r.covered == 0:
-            lines.append(f"| {r.name} | 0 | n/a | n/a | n/a | n/a | n/a | n/a |")
+            lines.append(f"| {r.name} | 0 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
             continue
         lines.append(
             f"| {r.name} | {r.covered} | {_pct(r.accuracy)} | {_pct(r.ci_low)} to "
             f"{_pct(r.ci_high)} | {_pct(r.chance)} | {100 * r.lift:+.1f} pt | {_z(r.z)} | "
-            f"{_p(r.p_value)} |"
+            f"{_p(r.p_value)} | {_p(r.p_holm)} |"
         )
     lines += [
         "",
         "Ties are scored by expected credit under random tie-breaking; a heuristic that",
         "ties every option, or does not apply, abstains on that item. p-values are exact",
         "for heuristics covering up to 500 items and use the normal approximation above.",
+        "Each interval and p-value is for one heuristic on its own; with this many heuristics,",
+        "read the Holm column (adjusted over every heuristic in the table) before calling one",
+        "above chance.",
     ]
     return "\n".join(lines) + "\n"
 

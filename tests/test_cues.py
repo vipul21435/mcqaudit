@@ -149,3 +149,28 @@ def test_null_false_positive_rate_at_small_coverage():
         hits += evaluate(items, "longest", longest).p_value < 0.05
     # An exact test never exceeds its level; Binomial(400, 0.05) rarely passes 32.
     assert hits <= 32
+
+
+def test_holm_adjustment_across_heuristics():
+    from mcqaudit.stats import holm_adjust
+
+    rng = random.Random(31)
+    items = [_random_item(rng, f"q{i}", plant=False) for i in range(300)]
+    results = evaluate_all(items)
+    tested = [r for r in results if r.p_value is not None]
+    assert all(r.p_holm >= r.p_value for r in tested)
+    assert [r.p_holm for r in tested] == holm_adjust([r.p_value for r in tested])
+
+
+def test_null_family_wise_rate_with_holm():
+    rng = random.Random(41)
+    any_raw = any_holm = 0
+    trials = 60
+    for t in range(trials):
+        items = [_random_item(rng, f"q{t}-{i}", plant=False) for i in range(200)]
+        ps = [(r.p_value, r.p_holm) for r in evaluate_all(items) if r.p_value is not None]
+        any_raw += min(p for p, _ in ps) < 0.05
+        any_holm += min(h for _, h in ps) < 0.05
+    assert any_holm <= any_raw
+    # Holm holds the family-wise rate at 0.05: Binomial(60, 0.05) above 9 is rare.
+    assert any_holm <= 9
