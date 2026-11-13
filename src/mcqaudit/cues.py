@@ -15,11 +15,13 @@ the one-sided p-value uses the normal approximation.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from .data import LETTERS, Item
 from .stats import normal_upper_p, wilson_interval
+from .text import char_ngrams, content_words, jaccard, normalise, parse_number
 
 Heuristic = Callable[[Item], frozenset[int]]
 
@@ -54,6 +56,76 @@ def position(k: int) -> Heuristic:
     return pick
 
 
+def _overlaps(item: Item) -> list[int]:
+    question = content_words(item.question)
+    return [len(content_words(o) & question) for o in item.options]
+
+
+def most_overlap(item: Item) -> frozenset[int]:
+    """The option sharing the most content words with the question."""
+    return _extremes(_overlaps(item), pick_max=True)
+
+
+def least_overlap(item: Item) -> frozenset[int]:
+    """The option sharing the fewest content words with the question."""
+    return _extremes(_overlaps(item), pick_max=False)
+
+
+_ALL_ABOVE = re.compile(
+    r"\ball (of )?(the )?(above|options|choices|answers|of these)\b|"
+    r"\ball (are|of them are) (correct|true)\b"
+)
+_NONE_ABOVE = re.compile(
+    r"\bnone (of )?(the )?(above|options|choices|answers|of these)\b|"
+    r"\bnone (are|is|of them are) (correct|true)\b"
+)
+_BOTH = re.compile(r"\bboth\b")
+
+
+def _matching(pattern: re.Pattern[str]) -> Heuristic:
+    def pick(item: Item) -> frozenset[int]:
+        return frozenset(i for i, o in enumerate(item.options) if pattern.search(normalise(o)))
+
+    return pick
+
+
+all_of_the_above = _matching(_ALL_ABOVE)
+all_of_the_above.__doc__ = 'An option of the "all of the above" kind.'
+none_of_the_above = _matching(_NONE_ABOVE)
+none_of_the_above.__doc__ = 'An option of the "none of the above" kind.'
+both_option = _matching(_BOTH)
+both_option.__doc__ = 'An option containing "both" ("both A and B").'
+
+
+def middle_number(item: Item) -> frozenset[int]:
+    """When every option is a single number: the option(s) holding the median value."""
+    values = [parse_number(o) for o in item.options]
+    if any(v is None for v in values) or len(set(values)) < 3:
+        return frozenset()
+    distinct = sorted(set(values))  # type: ignore[type-var]
+    m = len(distinct)
+    middle = {distinct[(m - 1) // 2], distinct[m // 2]}
+    return frozenset(i for i, v in enumerate(values) if v in middle)
+
+
+def _similarity_to_others(item: Item) -> list[float]:
+    grams = [char_ngrams(o) for o in item.options]
+    k = len(grams)
+    return [
+        sum(jaccard(grams[i], grams[j]) for j in range(k) if j != i) / (k - 1) for i in range(k)
+    ]
+
+
+def most_similar(item: Item) -> frozenset[int]:
+    """The option most similar to the other options (mean character-trigram Jaccard)."""
+    return _extremes(_similarity_to_others(item), pick_max=True)
+
+
+def odd_one_out(item: Item) -> frozenset[int]:
+    """The option least similar to the other options."""
+    return _extremes(_similarity_to_others(item), pick_max=False)
+
+
 def default_heuristics(max_options: int) -> dict[str, Heuristic]:
     """The fixed set of heuristics, named as they appear in reports."""
     table: dict[str, Heuristic] = {
@@ -61,6 +133,14 @@ def default_heuristics(max_options: int) -> dict[str, Heuristic]:
     }
     table["longest option"] = longest
     table["shortest option"] = shortest
+    table["most question overlap"] = most_overlap
+    table["least question overlap"] = least_overlap
+    table["all of the above"] = all_of_the_above
+    table["none of the above"] = none_of_the_above
+    table["both ..."] = both_option
+    table["middle number"] = middle_number
+    table["most similar to others"] = most_similar
+    table["odd one out"] = odd_one_out
     return table
 
 

@@ -54,8 +54,8 @@ def test_cues_json(small, capsys):
 def test_cues_markdown_on_the_example(capsys):
     assert main(["cues", str(SAMPLE)]) == 0
     out = capsys.readouterr().out
-    first_row = [line for line in out.splitlines() if line.startswith("| ")][1]
-    assert first_row.startswith("| longest option |")
+    rows = [line for line in out.splitlines() if line.startswith("| ")][1:]
+    assert any(r.startswith("| longest option |") for r in rows[:2])
 
 
 def test_bad_file_exits_with_2(tmp_path, capsys):

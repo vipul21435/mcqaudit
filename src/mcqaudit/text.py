@@ -1,0 +1,76 @@
+"""Text normalisation shared by the heuristics, hygiene checks and features."""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+
+_WORD = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
+_SPACE = re.compile(r"\s+")
+_NUMBER = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?(?:/\d+)?")
+
+# A short list of English function words; overlap counts ignore them.
+_STOP_TEXT = """
+a an the of to in on at by for with from and or but not no is are was were be been being it its
+this that these those which what who whom whose when where why how as than then so if do does did
+has have had can could will would shall should may might must i you he she we they them his her
+their our your my me us there here
+"""
+STOPWORDS = frozenset(_STOP_TEXT.split())
+
+
+def normalise(text: str) -> str:
+    """Case-folded, NFKC-normalised text with collapsed whitespace and no trailing period."""
+    text = unicodedata.normalize("NFKC", text).casefold()
+    text = _SPACE.sub(" ", text).strip()
+    return text.rstrip(" .")
+
+
+def words(text: str) -> list[str]:
+    return _WORD.findall(normalise(text))
+
+
+def content_words(text: str) -> set[str]:
+    return {w for w in words(text) if w not in STOPWORDS}
+
+
+def char_ngrams(text: str, n: int = 3) -> set[str]:
+    padded = f" {normalise(text)} "
+    if len(padded) <= n:
+        return {padded}
+    return {padded[i : i + n] for i in range(len(padded) - n + 1)}
+
+
+def jaccard(a: set[str], b: set[str]) -> float:
+    if not a and not b:
+        return 1.0
+    return len(a & b) / len(a | b)
+
+
+def parse_number(text: str) -> float | None:
+    """The value of an option that is a single number, with optional unit words after it.
+
+    Accepts integers, decimals, thousands separators, simple fractions and a
+    trailing percent sign or unit (``"3.5 kg"``, ``"1,200"``, ``"3/8"``). Returns
+    ``None`` when the option holds no number or more than one.
+    """
+    s = normalise(text).replace("−", "-").lstrip("$€£")
+    found = [m for m in _NUMBER.finditer(s) if m.group(0) and any(c.isdigit() for c in m.group(0))]
+    if len(found) != 1:
+        return None
+    match = found[0]
+    if match.start() != 0:
+        return None
+    rest = s[match.end() :].strip()
+    if rest and not re.fullmatch(r"%|[a-zµ°/^²³ ]{1,12}", rest):
+        return None
+    token = match.group(0).replace(",", "")
+    if "/" in token:
+        num, den = token.split("/")
+        if not num or float(den) == 0:
+            return None
+        return float(num) / float(den)
+    try:
+        return float(token)
+    except ValueError:
+        return None

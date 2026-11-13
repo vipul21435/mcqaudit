@@ -82,7 +82,53 @@ def test_default_set_and_ordering():
     assert results[0].name == "always A"
     assert results[0].accuracy == pytest.approx(1.0)
     assert "always D" not in {r.name for r in results}
-    lifts = [r.lift for r in results]
+    lifts = [r.lift for r in results if r.covered]
     assert lifts == sorted(lifts, reverse=True)
     never = evaluate_all(items, {"always D": position(3), "always A": position(0)})
     assert never[-1].name == "always D" and never[-1].covered == 0
+
+
+def test_overlap_heuristics():
+    it = Item(
+        "q",
+        "Which gas do plants absorb from the air?",
+        ("oxygen", "carbon dioxide from air", "helium", "plants absorb nitrogen"),
+        1,
+    )
+    from mcqaudit.cues import least_overlap, most_overlap
+
+    assert most_overlap(it) == {3}
+    assert least_overlap(it) == {0, 2}
+
+
+def test_all_none_both_patterns():
+    from mcqaudit.cues import all_of_the_above, both_option, none_of_the_above
+
+    it = item(["red", "Both A and B", "All of the above.", "None of these"], 2)
+    assert all_of_the_above(it) == {2}
+    assert none_of_the_above(it) == {3}
+    assert both_option(it) == {1}
+    assert all_of_the_above(item(["tall", "wall"], 0)) == frozenset()
+
+
+def test_middle_number():
+    from mcqaudit.cues import middle_number
+
+    assert middle_number(item(["10", "2", "7", "100"], 2)) == {0, 2}
+    assert middle_number(item(["3 kg", "1 kg", "9 kg"], 0)) == {0}
+    assert middle_number(item(["3", "four", "5"], 0)) == frozenset()
+    assert middle_number(item(["1", "1", "2"], 0)) == frozenset()
+
+
+def test_similarity_heuristics():
+    from mcqaudit.cues import most_similar, odd_one_out
+
+    it = item(["photosynthesis", "photosynthetic", "photosynthesise", "gravity"], 0)
+    assert odd_one_out(it) == {3}
+    assert 3 not in most_similar(it)
+
+
+def test_every_default_heuristic_runs_on_odd_items():
+    items = [item(["", "1/2", "0.5", "-3"], 1), item(["x", "x"], 0), item(["A b", "c D", "e"], 2)]
+    for res in evaluate_all(items):
+        assert 0.0 <= res.accuracy <= 1.0
