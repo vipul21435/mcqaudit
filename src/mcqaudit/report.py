@@ -108,7 +108,8 @@ def cues_markdown(results: Sequence[CueResult], source: str = "", confidence: fl
     lines += [
         "",
         "Ties are scored by expected credit under random tie-breaking; a heuristic that",
-        "ties every option, or does not apply, abstains on that item.",
+        "ties every option, or does not apply, abstains on that item. p-values are exact",
+        "for heuristics covering up to 500 items and use the normal approximation above.",
     ]
     return "\n".join(lines) + "\n"
 

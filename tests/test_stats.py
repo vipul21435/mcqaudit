@@ -133,3 +133,28 @@ def test_holm_adjust():
     assert holm_adjust([]) == []
     assert all(0 <= a <= 1 for a in holm_adjust([0.9, 0.8, 0.7]))
     assert math.isclose(max(holm_adjust([0.9, 0.8, 0.7])), 1.0)
+
+
+def test_credit_upper_p_closed_forms():
+    from mcqaudit.stats import credit_upper_p
+
+    # 8 of 8 single picks right with four options: 0.25 ** 8.
+    assert credit_upper_p([(4, 1)] * 8, 8.0) == pytest.approx(0.25**8, rel=1e-12)
+    assert credit_upper_p([(4, 1)] * 8, 0.0) == pytest.approx(1.0)
+    # Binomial tail for single picks.
+    assert credit_upper_p([(4, 1)] * 20, 9.0) == pytest.approx(sps.binom.sf(8, 20, 0.25))
+    assert credit_upper_p([], 0.0) == 1.0
+    assert credit_upper_p([(4, 1)] * 10, 3.0, max_units=5) is None
+
+
+def test_credit_upper_p_matches_enumeration_with_ties():
+    from mcqaudit.stats import credit_upper_p
+
+    pairs = [(4, 2), (4, 1), (3, 2), (5, 3), (4, 2), (4, 1)]
+    outcomes = [[(1.0 / c, c / k), (0.0, 1 - c / k)] for k, c in pairs]
+    observed = 0.5 + 1 + 0.5 + 0 + 0.5 + 0
+    total = 0.0
+    for combo in itertools.product(*outcomes):
+        if sum(v for v, _ in combo) >= observed - 1e-9:
+            total += math.prod(q for _, q in combo)
+    assert credit_upper_p(pairs, observed) == pytest.approx(total, rel=1e-12)

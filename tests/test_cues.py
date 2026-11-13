@@ -132,3 +132,20 @@ def test_every_default_heuristic_runs_on_odd_items():
     items = [item(["", "1/2", "0.5", "-3"], 1), item(["x", "x"], 0), item(["A b", "c D", "e"], 2)]
     for res in evaluate_all(items):
         assert 0.0 <= res.accuracy <= 1.0
+
+
+def test_small_coverage_uses_the_exact_p_value():
+    items = [item(["a", "bb", "c", "d"], 1, f"q{i}") for i in range(8)]
+    res = evaluate(items, "longest", longest)
+    assert res.p_exact
+    assert res.p_value == pytest.approx(0.25**8)
+
+
+def test_null_false_positive_rate_at_small_coverage():
+    rng = random.Random(21)
+    hits, trials = 0, 400
+    for t in range(trials):
+        items = [_random_item(rng, f"q{t}-{i}", plant=False) for i in range(12)]
+        hits += evaluate(items, "longest", longest).p_value < 0.05
+    # An exact test never exceeds its level; Binomial(400, 0.05) rarely passes 32.
+    assert hits <= 32

@@ -8,8 +8,10 @@ it covers, with a Wilson interval.
 
 Against chance: if the key position were independent of what the heuristic
 looks at, an item with ``k`` options would give credit with mean ``1/k`` and
-variance ``1/(k|C|) - 1/k^2``. The z statistic sums both over covered items and
-the one-sided p-value uses the normal approximation.
+variance ``1/(k|C|) - 1/k^2``. The z statistic sums both over covered items.
+The one-sided p-value is exact (the per-item credit distributions convolved)
+when at most ``EXACT_MAX_ITEMS`` items are covered, and uses the normal
+approximation above that.
 """
 
 from __future__ import annotations
@@ -20,10 +22,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from .data import LETTERS, Item
-from .stats import normal_upper_p, wilson_interval
+from .stats import credit_upper_p, normal_upper_p, wilson_interval
 from .text import char_ngrams, content_words, jaccard, normalise, parse_number
 
 Heuristic = Callable[[Item], frozenset[int]]
+
+EXACT_MAX_ITEMS = 500
 
 
 def _extremes(values: Sequence[float], pick_max: bool) -> frozenset[int]:
@@ -156,6 +160,7 @@ class CueResult:
     chance: float
     z: float | None
     p_value: float | None
+    p_exact: bool = False
 
     @property
     def lift(self) -> float:
@@ -171,6 +176,7 @@ def evaluate(
     credit = 0.0
     chance_sum = 0.0
     var_sum = 0.0
+    pairs: list[tuple[int, int]] = []
     for item in items:
         picks = heuristic(item)
         k = item.n_options
@@ -178,6 +184,7 @@ def evaluate(
             continue
         covered += 1
         size = len(picks)
+        pairs.append((k, size))
         if item.answer in picks:
             credit += 1.0 / size
         chance_sum += 1.0 / k
@@ -187,11 +194,16 @@ def evaluate(
     accuracy = credit / covered
     lo, hi = wilson_interval(credit, covered, confidence)
     z = p = None
+    exact = False
     if var_sum > 0:
         z = (credit - chance_sum) / math.sqrt(var_sum)
-        p = normal_upper_p(z)
+        if covered <= EXACT_MAX_ITEMS:
+            p = credit_upper_p(pairs, credit)
+            exact = p is not None
+        if p is None:
+            p = normal_upper_p(z)
     return CueResult(
-        name, len(items), covered, credit, accuracy, lo, hi, chance_sum / covered, z, p
+        name, len(items), covered, credit, accuracy, lo, hi, chance_sum / covered, z, p, exact
     )
 
 

@@ -200,3 +200,38 @@ def holm_adjust(p_values: Sequence[float]) -> list[float]:
         running = max(running, min(1.0, (m - rank) * p_values[i]))
         adjusted[i] = running
     return adjusted
+
+
+def credit_upper_p(
+    items: Sequence[tuple[int, int]], observed: float, *, max_units: int = 2_000_000
+) -> float | None:
+    """Exact P(total credit >= observed) for independent items under the no-cue null.
+
+    Each pair ``(k, c)`` is an item with ``k`` options on which a heuristic names
+    ``c`` options: it earns ``1/c`` with probability ``c/k`` and 0 otherwise. The
+    credits are put on a common grid of ``1/L`` (``L`` the least common multiple
+    of the ``c``) and the distributions are convolved. Returns ``None`` when the
+    grid would exceed ``max_units`` cells times items.
+    """
+    if not items:
+        return 1.0
+    lcm = 1
+    for _, c in items:
+        lcm = lcm * c // math.gcd(lcm, c)
+    values = [lcm // c for _, c in items]
+    total = sum(values)
+    if total * len(items) > max_units:
+        return None
+    dist = [0.0] * (total + 1)
+    dist[0] = 1.0
+    top = 0
+    for (k, c), v in zip(items, values, strict=True):
+        q = c / k
+        for s in range(top, -1, -1):
+            mass = dist[s]
+            if mass:
+                dist[s + v] += mass * q
+                dist[s] = mass * (1.0 - q)
+        top += v
+    threshold = round(observed * lcm - 1e-9)
+    return min(1.0, sum(dist[threshold:]))
