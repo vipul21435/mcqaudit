@@ -152,3 +152,12 @@ def test_repeated_items_are_not_answered_from_memory():
     # Without the exclusion this file scores far above chance (each twin memorised).
     assert res.accuracy < 0.36
     assert res.p_value > 0.001
+
+
+def test_items_without_subject_form_their_own_group():
+    items = [Item(f"q{i}", "q", ("a", "b"), 0, f"s{i % 6}") for i in range(60)]
+    items.append(Item("blank", "q", ("a", "b"), 0, None))
+    folds, how = make_folds(items, 5, 0, "subject")
+    assert how == "grouped by subject"
+    same = [f for it, f in zip(items, folds, strict=True) if it.subject == "s0"]
+    assert len(set(same)) == 1

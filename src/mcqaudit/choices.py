@@ -7,8 +7,9 @@ multinomial logistic regression over positions is fitted on the training folds
 and scored on the held-out fold; positions an item does not have are masked.
 
 Folds are grouped by subject when the data has at least as many subjects as
-folds, so that the model is always tested on subjects it has not seen; without
-subjects the folds are a seeded random split. Training never sees an item whose
+folds (items without a subject count as one more group), so that the model
+is always tested on subjects it has not seen; without subjects the folds are a
+seeded random split. Training never sees an item whose
 normalised option set also occurs in the held-out fold, so repeated items are
 not answered from memory. Its out-of-fold accuracy above
 chance is a lower bound on what the options give away; the report also gives
@@ -78,8 +79,10 @@ def featurise(items: Sequence[Item], n_features: int = 2**12, max_n: int = 2) ->
 def make_folds(items: Sequence[Item], n_folds: int, seed: int, group: str) -> tuple[list[int], str]:
     """Fold number per item, and how the folds were built."""
     n = len(items)
-    subjects = Counter(it.subject for it in items if it.subject)
-    if group == "subject" and len(subjects) >= n_folds and all(it.subject for it in items):
+    # Items without a subject form one group of their own, as in the key audit.
+    subjects = Counter(it.subject or "" for it in items)
+    has_subjects = any(it.subject for it in items)
+    if group == "subject" and has_subjects and len(subjects) >= n_folds:
         # Largest subjects first, each to the currently smallest fold.
         rng = random.Random(seed)
         names = sorted(subjects, key=lambda s: (-subjects[s], rng.random()))
@@ -89,7 +92,7 @@ def make_folds(items: Sequence[Item], n_folds: int, seed: int, group: str) -> tu
             f = min(range(n_folds), key=lambda j: (sizes[j], j))
             fold_of[name] = f
             sizes[f] += subjects[name]
-        return [fold_of[it.subject] for it in items], "grouped by subject"  # type: ignore[index]
+        return [fold_of[it.subject or ""] for it in items], "grouped by subject"
     order = list(range(n))
     random.Random(seed).shuffle(order)
     folds = [0] * n
