@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcqaudit"
+version = "0.1.0"
+description = "Measure what a multiple-choice benchmark gives away before any model reads the question."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Vipul Raj Jha" }]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["multiple-choice", "benchmark", "evaluation", "dataset-audit", "annotation-artifacts"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.optional-dependencies]
+parquet = ["pyarrow>=12"]
+dev = [
+    "pytest>=7",
+    "pytest-cov>=4",
+    "ruff>=0.5",
+    "scipy>=1.10",
+]
+
+[project.scripts]
+mcqaudit = "mcqaudit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/vipul21435/mcqaudit"
+Issues = "https://github.com/vipul21435/mcqaudit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcqaudit"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
