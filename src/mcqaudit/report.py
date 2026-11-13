@@ -151,6 +151,8 @@ def choices_markdown(res: ChoicesOnlyResult, source: str = "", confidence: float
         f"{_p(res.p_value)} | {_pct(res.majority_accuracy)} |",
         "",
         "Majority position: accuracy of always picking the training folds' most common position.",
+        f"{res.test_items_seen_in_training} held-out items had their option set in another fold; "
+        "those copies were left out of training.",
     ]
     if res.folds_at_iteration_cap:
         lines += [

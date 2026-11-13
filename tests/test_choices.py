@@ -140,3 +140,15 @@ def test_iteration_cap_is_reported():
     from mcqaudit.report import choices_markdown
 
     assert "Warning: L-BFGS stopped at its cap" in choices_markdown(res)
+
+
+def test_repeated_items_are_not_answered_from_memory():
+    rng = random.Random(12)
+    base = [_item(rng, i, plant=False) for i in range(150)]
+    items = base + [Item(f"r{i}", it.question, it.options, it.answer) for i, it in enumerate(base)]
+    res = choices_only(items, n_folds=5, n_features=2**10, max_iter=100)
+    assert res.folds.startswith("random")
+    assert res.test_items_seen_in_training > 100
+    # Without the exclusion this file scores far above chance (each twin memorised).
+    assert res.accuracy < 0.36
+    assert res.p_value > 0.001

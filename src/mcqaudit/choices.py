@@ -8,7 +8,9 @@ and scored on the held-out fold; positions an item does not have are masked.
 
 Folds are grouped by subject when the data has at least as many subjects as
 folds, so that the model is always tested on subjects it has not seen; without
-subjects the folds are a seeded random split. Its out-of-fold accuracy above
+subjects the folds are a seeded random split. Training never sees an item whose
+normalised option set also occurs in the held-out fold, so repeated items are
+not answered from memory. Its out-of-fold accuracy above
 chance is a lower bound on what the options give away; the report also gives
 the accuracy of always picking the training folds' most common position, so the
 part due to key imbalance alone can be read off.
@@ -29,7 +31,7 @@ import numpy as np
 from .data import Item
 from .logreg import SoftmaxRegression, SparseRows
 from .stats import normal_upper_p, wilson_interval
-from .text import words
+from .text import normalise, words
 
 
 def option_ngrams(text: str, max_n: int = 2) -> list[str]:
@@ -111,6 +113,7 @@ class ChoicesOnlyResult:
     majority_accuracy: float
     n_features: int
     C: float
+    test_items_seen_in_training: int = 0
     max_iter: int = 0
     folds_at_iteration_cap: int = 0
 
@@ -148,9 +151,17 @@ def choices_only(
     pred = np.full(n, -1)
     majority_hits = 0
     at_cap = 0
+    keys = [tuple(sorted(normalise(o) for o in it.options)) for it in items]
+    seen = 0
     for f in range(n_folds):
         test = np.flatnonzero(fold_arr == f)
-        train = np.flatnonzero(fold_arr != f)
+        test_keys = {keys[i] for i in test}
+        # An item whose option set also occurs in the test fold is left out of training,
+        # so repeated items cannot be answered from memory.
+        train_all = np.flatnonzero(fold_arr != f)
+        train_keys = {keys[i] for i in train_all}
+        seen += sum(keys[i] in train_keys for i in test)
+        train = np.array([i for i in train_all if keys[i] not in test_keys], dtype=int)
         if len(test) == 0 or len(train) == 0:
             continue
         model = SoftmaxRegression(width, C=C, max_iter=max_iter, ftol=ftol)
@@ -187,6 +198,7 @@ def choices_only(
         majority_accuracy=majority_hits / n,
         n_features=n_features,
         C=C,
+        test_items_seen_in_training=seen,
         max_iter=max_iter,
         folds_at_iteration_cap=at_cap,
     )
