@@ -249,6 +249,8 @@ all).
   example a model on the original file and on a copy made with `mcqaudit shuffle`.
 - [contamscan](https://github.com/vipul21435/contamscan) and [datasieve](https://github.com/vipul21435/datasieve):
   n-gram contamination checks and deduplication at corpus scale, beyond the split-overlap check here.
+- [rankstable](https://github.com/vipul21435/rankstable): how stable a leaderboard's order is to the averaging rule and the choice of benchmarks.
+- [calibcheck](https://github.com/vipul21435/calibcheck): measures how well a model's confidence matches how often it is right, with held-out recalibration checks.
 
 ## Licence
 
