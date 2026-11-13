@@ -67,8 +67,9 @@ $ mcqaudit shuffle examples/sample.jsonl --balanced -o balanced.jsonl
 wrote 20 items to balanced.jsonl; position test p 0.0121 before, 1 after
 ```
 
-`mcqaudit hygiene FILE [--against OTHER_SPLIT]` prints the hygiene table. Every command takes `--format json`
-and `-o FILE`. `python examples/quickstart.py` runs the same checks through the Python API.
+`mcqaudit hygiene FILE [--against OTHER_SPLIT]` prints the hygiene table. `audit`, `cues`, `choices-only` and
+`hygiene` take `--format json` and `-o FILE`; `shuffle` always writes JSONL to its `-o FILE` and ignores
+`--format`. `python examples/quickstart.py` runs the same checks through the Python API.
 
 ## How it works
 
