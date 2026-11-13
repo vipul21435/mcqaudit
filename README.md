@@ -46,12 +46,12 @@ z +2.82, more runs than chance (the key avoids repeating a position).
 ```
 $ mcqaudit cues examples/sample.jsonl
 ...
-| heuristic | covered | accuracy | 95 % interval | chance | lift | z | p (one-sided) |
-|---|---|---|---|---|---|---|---|
-| most question overlap | 8 | 100.0 % | 67.6 % to 100.0 % | 25.0 % | +75.0 pt | +4.90 | 4.8e-07 |
-| longest option | 16 | 78.1 % | 53.7 % to 91.7 % | 25.0 % | +53.1 pt | +5.01 | 2.7e-07 |
-| always C | 20 | 60.0 % | 38.7 % to 78.1 % | 25.0 % | +35.0 pt | +3.61 | 0.0002 |
-| middle number | 6 | 50.0 % | 18.8 % to 81.2 % | 25.0 % | +25.0 pt | +2.45 | 0.0072 |
+| heuristic | covered | accuracy | 95 % interval | chance | lift | z | p (one-sided) | p (Holm) |
+|---|---|---|---|---|---|---|---|---|
+| most question overlap | 8 | 100.0 % | 67.6 % to 100.0 % | 25.0 % | +75.0 pt | +4.90 | 1.5e-05 | 0.0002 |
+| longest option | 16 | 78.1 % | 53.7 % to 91.7 % | 25.0 % | +53.1 pt | +5.01 | 6.6e-06 | 7.3e-05 |
+| always C | 20 | 60.0 % | 38.7 % to 78.1 % | 25.0 % | +35.0 pt | +3.61 | 0.0009 | 0.0084 |
+| middle number | 6 | 50.0 % | 18.8 % to 81.2 % | 25.0 % | +25.0 pt | +2.45 | 0.0156 | 0.1250 |
 ...
 ```
 
@@ -61,7 +61,9 @@ $ mcqaudit choices-only examples/sample.jsonl --folds 2
 | items | correct | accuracy | 95 % interval | chance | lift | z | p (one-sided) | majority position |
 |---|---|---|---|---|---|---|---|---|
 | 20 | 12 | 60.0 % | 38.7 % to 78.1 % | 25.0 % | +35.0 pt | +3.61 | 0.0002 | 60.0 % |
-...
+
+Majority position: accuracy of always picking the training folds' most common position.
+0 held-out items had their option set in another fold; those copies were left out of training.
 
 $ mcqaudit shuffle examples/sample.jsonl --balanced -o balanced.jsonl
 wrote 20 items to balanced.jsonl; position test p 0.0121 before, 1 after
@@ -100,18 +102,26 @@ option is a single number; the option most similar to the others and the odd one
 character trigrams). A heuristic that names several options is scored by its expected credit under random
 tie-breaking, 1/|C| when the answer is in the tied set C; it abstains when it names every option or none. Accuracy
 over covered items comes with a Wilson score interval. If the key were independent of the cue, an item with k
-options would give credit with mean 1/k and variance 1/(k|C|) - 1/k^2; the z test against chance sums both over
-covered items.
+options would give credit with mean 1/k and variance 1/(k|C|) - 1/k^2. The one-sided p-value against chance is exact
+when a heuristic covers at most 500 items (the per-item credit distributions are convolved on a common grid) and
+uses the normal approximation to the summed credit above that. With 14 or more heuristics in one table, each p-value
+also gets a Holm adjustment across the heuristics, and that column is the one to read before calling a heuristic
+above chance.
 
 **Choices-only classifier (`choices-only`).** The idea follows partial-input baselines (hypothesis-only models for
 NLI, choices-only prompts for LLMs, see Background): give a model everything except the question. Here the model is
 a multinomial logistic regression over answer positions. For each position j, the word unigrams and bigrams of
 option j are hashed (CRC-32, signed) into their own block of 4,096 columns; the question is never read. The loss is
 the mean cross-entropy plus (1 / 2Cn) ||W||^2 with an unpenalised intercept, the same optimum as scikit-learn's
-`LogisticRegression(C)` (the tests compare the two), fitted by a small L-BFGS written on numpy; positions an item
-lacks are masked. Folds are grouped by subject when there are at least as many subjects as folds, so the model is
-tested on subjects it has never seen; otherwise they are a seeded random split. The pooled out-of-fold accuracy with
-a Wilson interval is a lower bound on what the options reveal. The report also gives the accuracy of always picking
+`LogisticRegression(C)` (the tests compare the two), fitted by a small L-BFGS written on numpy with up to 300
+iterations per fold (`--max-iter`); the report warns when a fold stops at that cap rather than at the optimum.
+Positions an item lacks are masked. Folds are grouped by subject when there are at least as many subject groups as
+folds (items without a subject form one group), so the model is tested on subjects it has never seen; otherwise
+they are a seeded random split. An item whose normalised option set also occurs in the held-out fold is left out of
+training, so repeated items, which can span subjects, are not answered from memory; the report counts the held-out
+items affected. Features are built in a fixed order, so the result does not depend on the Python hash seed. The
+pooled out-of-fold accuracy with a Wilson interval is a lower bound on what the options reveal (its p-value uses
+the normal approximation). The report also gives the accuracy of always picking
 the training folds' most common position, which separates key imbalance from wording cues.
 
 **Hygiene (`hygiene`).** After normalisation (NFKC, case-folded, collapsed whitespace, no trailing period): items
@@ -126,8 +136,8 @@ The answer text always follows the key.
 
 ## Results on public benchmarks
 
-Commands (about a minute of compute on a laptop, plus the downloads, about 95 MB; nothing is committed except the
-numbers):
+Commands (measured on a loaded laptop with one thread: 84 s of CPU, 3 min 11 s wall clock, plus about 95 MB of
+downloads; nothing is committed except the numbers):
 
 ```
 bash benchmarks/fetch.sh data
@@ -150,49 +160,58 @@ Answer positions and order:
 | dataset | A | B | C | D | E | position test | runs test z (p) |
 |---|---|---|---|---|---|---|---|
 | MMLU test | 22.9 % | 24.7 % | 25.5 % | 26.9 % | | chi-square 45.9, df 3, p 5.9e-10; 6 of 57 subjects Holm p < 0.05 | -1.81 (0.070) |
-| ARC-Challenge test | 22.6 % | 26.5 % | 26.5 % | 24.4 % | | summed chi-square 7.6, df 9, p 0.58 | +0.62 (0.53) |
+| ARC-Challenge test | 22.6 % | 26.5 % | 26.5 % | 24.4 % | | summed chi-square 7.6, df 9, p 0.58; four-option stratum alone p 0.17 | +0.62 (0.53) |
 | CommonsenseQA val. | 19.6 % | 20.9 % | 19.7 % | 20.6 % | 19.2 % | chi-square 1.2, df 4, p 0.88 | -1.98 (0.048) |
 | MedMCQA val. | 32.2 % | 25.9 % | 22.1 % | 19.7 % | | chi-square 149.4, df 3, p 3.6e-32; 4 of 21 subjects Holm p < 0.05 | +1.68 (0.092) |
 
 ARC shares are over its 1,165 four-option items; it also has 4 three-option and 3 five-option items, tested in
-their own strata.
+their own strata. Summing chi-square over strata is conservative when some strata are this small, which is why the
+largest stratum's own p-value is printed beside the combined one.
 
 Question-free scores. "Best heuristic" is the one with the largest lower interval bound above chance among those
-that apply to at least 30 items. It is picked after looking at 14 or more heuristics, so its interval is optimistic.
+that apply to at least 30 items. It is picked after looking at 14 or more heuristics, so its interval is optimistic;
+the Holm-adjusted p-value accounts for the number of heuristics, not for the choice of the best one.
 
-| dataset | best heuristic (items covered) | its accuracy (95 % CI) | chance | choices-only accuracy (95 % CI) | folds | majority position |
-|---|---|---|---|---|---|---|
-| MMLU test | all of the above (344) | 64.5 % (59.3 to 69.4) | 25.0 % | 26.6 % (25.9 to 27.4) | grouped by subject | 24.9 % |
-| ARC-Challenge test | least question overlap (377) | 33.5 % (28.9 to 38.4) | 25.0 % | 26.7 % (24.3 to 29.3) | random | 25.2 % |
-| CommonsenseQA val. | longest option (1,220) | 22.2 % (20.0 to 24.6) | 20.0 % | 21.0 % (18.9 to 23.4) | random | 19.7 % |
-| MedMCQA val. | all of the above (113) | 46.9 % (38.0 to 56.1) | 25.0 % | 28.9 % (27.6 to 30.3) | grouped by subject | 32.2 % |
+| dataset | best heuristic (items covered) | its accuracy (95 % CI) | chance | p (Holm) | choices-only accuracy (95 % CI) | folds | majority position |
+|---|---|---|---|---|---|---|---|
+| MMLU test | all of the above (344) | 64.5 % (59.3 to 69.4) | 25.0 % | 1.4e-52 | 26.0 % (25.3 to 26.7) | grouped by subject | 24.9 % |
+| ARC-Challenge test | least question overlap (377) | 33.5 % (28.9 to 38.4) | 25.0 % | 5.7e-08 | 27.2 % (24.7 to 29.8) | random | 25.2 % |
+| CommonsenseQA val. | longest option (1,220) | 22.2 % (20.0 to 24.6) | 20.0 % | 0.24 | 21.0 % (18.8 to 23.3) | random | 18.8 % |
+| MedMCQA val. | all of the above (113) | 46.9 % (38.0 to 56.1) | 25.0 % | 4.6e-06 | 28.9 % (27.5 to 30.3) | grouped by subject | 32.2 % |
+
+Held-out items whose option set was also in another fold, and so left out of training: 382 for MMLU, 12 for ARC,
+2 for CommonsenseQA and 62 for MedMCQA. No fold stopped at the iteration cap. The MMLU count is reproducible: a
+second run in a new process, `PYTHONHASHSEED=7 mcqaudit choices-only data/mmlu/test.parquet`, gave the same 3,649
+correct answers.
 
 Hygiene, and overlap with the training or validation split:
 
-| dataset | duplicate options | duplicated question texts (items) | repeated item groups | answer in question (only the answer) | overlap exact / near |
+| dataset | duplicate options | duplicated question texts (items; texts whose items all differ in options) | repeated item groups | answer in question (only the answer) | overlap exact / near |
 |---|---|---|---|---|---|
-| MMLU test | 14 | 155 (331) | 110 | 92 (41) | 48 / 190 against validation |
-| ARC-Challenge test | 1 | 2 (4) | 0 | 5 (0) | 7 / 8 against train |
+| MMLU test | 14 | 155 (331; 46) | 110 | 92 (41) | 48 / 190 against validation |
+| ARC-Challenge test | 1 | 2 (4; 2) | 0 | 5 (0) | 7 / 8 against train |
 | CommonsenseQA val. | 24 | 0 | 0 | 0 | 0 / 0 against train |
 | MedMCQA val. | 21 | 0 | 0 | 7 (5) | 0 / 25 against train |
 
 No dataset had empty options or duplicates with conflicting answers.
 
 Read plainly: the MMLU test key leans towards D and away from A, and an "all of the above" option is the answer in
-64.5 % of the 344 items that have one. MedMCQA's validation key puts 32.2 % of answers at A; there the choices-only
-classifier (28.9 %) does worse than always answering the training folds' most common position (32.2 %), so as a
-lower bound it is loose. ARC-Challenge and CommonsenseQA keys are consistent with uniform at these sizes, and the
-classifier is within two points of chance on both. Many of MMLU's duplicated question texts are generic stems
-("Which of the following is true?") with different options; the 110 repeated groups share both question and
-options. The choices-only count can differ by an item between runs, because multi-threaded dot products in numpy do
-not fix their summation order.
+64.5 % of the 344 items that have one. With repeated items kept out of training, the choices-only classifier scores
+26.0 % on MMLU, one point above chance and above the majority position (24.9 %). MedMCQA's validation key puts
+32.2 % of answers at A; there the classifier (28.9 %) does worse than always answering the training folds' most
+common position (32.2 %), so as a lower bound it is loose. ARC-Challenge and CommonsenseQA keys are consistent with
+uniform at these sizes, and the classifier is within 2.2 points of chance on both. On CommonsenseQA no heuristic is
+above chance after the Holm adjustment (the best, longest option, has unadjusted p 0.022 and Holm p 0.24). Of
+MMLU's 155 duplicated question texts, 46 are generic stems ("Which of the following is true?") whose items all have
+different options, and 109 hold at least one repeated item (same question and same options; 110 such groups in
+all).
 
 ## Limitations
 
 - Every test is about the dataset under a "no cue" null, not about any model. A cue found here is a regularity a
   model could use, not proof that one does.
-- The runs test and the z tests for heuristics and the classifier use normal approximations; for a few dozen items
-  treat their p-values as rough. Only the position test has an exact small-sample option.
+- The runs test and the classifier's z test use normal approximations; for a few dozen items treat their p-values
+  as rough. The position test and heuristics covering up to 500 items use exact p-values.
 - The choices-only classifier is one fixed linear model with one C, no tuning and 4,096 hashed columns per position
   (collisions are possible); a stronger model would give a higher lower bound. Folds are grouped by subject only
   when the file has a subject field (MMLU and MedMCQA here).
