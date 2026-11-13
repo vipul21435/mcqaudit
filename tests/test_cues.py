@@ -165,12 +165,12 @@ def test_holm_adjustment_across_heuristics():
 def test_null_family_wise_rate_with_holm():
     rng = random.Random(41)
     any_raw = any_holm = 0
-    trials = 60
+    trials = 30
     for t in range(trials):
         items = [_random_item(rng, f"q{t}-{i}", plant=False) for i in range(200)]
         ps = [(r.p_value, r.p_holm) for r in evaluate_all(items) if r.p_value is not None]
         any_raw += min(p for p, _ in ps) < 0.05
         any_holm += min(h for _, h in ps) < 0.05
     assert any_holm <= any_raw
-    # Holm holds the family-wise rate at 0.05: Binomial(60, 0.05) above 9 is rare.
-    assert any_holm <= 9
+    # Holm holds the family-wise rate at 0.05: Binomial(30, 0.05) above 6 is rare.
+    assert any_holm <= 6

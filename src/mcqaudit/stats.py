@@ -222,16 +222,16 @@ def credit_upper_p(
     total = sum(values)
     if total * len(items) > max_units:
         return None
-    dist = [0.0] * (total + 1)
+    import numpy as np
+
+    dist = np.zeros(total + 1)
     dist[0] = 1.0
     top = 0
     for (k, c), v in zip(items, values, strict=True):
         q = c / k
-        for s in range(top, -1, -1):
-            mass = dist[s]
-            if mass:
-                dist[s + v] += mass * q
-                dist[s] = mass * (1.0 - q)
+        moved = dist[: top + 1] * q
+        dist[: top + 1] *= 1.0 - q
+        dist[v : top + v + 1] += moved
         top += v
-    threshold = round(observed * lcm - 1e-9)
-    return min(1.0, sum(dist[threshold:]))
+    threshold = max(0, round(observed * lcm - 1e-9))
+    return float(min(1.0, dist[threshold:].sum()))
