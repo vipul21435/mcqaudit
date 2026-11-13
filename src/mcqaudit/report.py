@@ -172,6 +172,7 @@ def hygiene_markdown(
         ("items with an empty option", rep.empty_options),
         ("duplicated questions (groups)", rep.duplicate_question_groups),
         ("items in those groups", rep.duplicate_question_items),
+        ("repeated items (same question and same options)", rep.duplicate_item_groups),
         ("groups giving different answers to the same options", rep.conflicting_duplicates),
         ("answer text appears in the question", rep.answer_in_question),
         ("... and no distractor does", rep.answer_only_in_question),

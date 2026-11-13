@@ -35,9 +35,23 @@ def test_hygiene_counts_planted_defects():
     assert rep.duplicate_question_groups == 1
     assert rep.duplicate_question_items == 2
     assert rep.conflicting_duplicates == 1
+    assert rep.duplicate_item_groups == 1
     assert rep.option_counts == {3: 1, 4: 7}
     assert rep.off_mode_option_count == 1
     assert rep.examples["duplicate_options"] == ["dup-opt"]
+
+
+def test_repeated_items_with_the_same_answer_do_not_conflict():
+    items = [
+        it("a", "Which of the following is true?", ["x", "y"], 0),
+        it("b", "which of the following is true?", ["y", "x"], 1),
+        it("c", "Which of the following is true?", ["p", "q"], 0),
+    ]
+    rep = hygiene(items)
+    assert rep.duplicate_question_groups == 1
+    assert rep.duplicate_question_items == 3
+    assert rep.duplicate_item_groups == 1
+    assert rep.conflicting_duplicates == 0
 
 
 def test_short_answers_do_not_count_as_leaks():

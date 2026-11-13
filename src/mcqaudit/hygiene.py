@@ -26,6 +26,7 @@ class HygieneReport:
     empty_options: int
     duplicate_question_groups: int
     duplicate_question_items: int
+    duplicate_item_groups: int
     conflicting_duplicates: int
     answer_in_question: int
     answer_only_in_question: int
@@ -70,14 +71,15 @@ def hygiene(items: Sequence[Item], *, max_examples: int = 5) -> HygieneReport:
                 only_in_q += 1
 
     groups = [g for g in by_question.values() if len(g) > 1]
-    conflicting = 0
+    conflicting = repeated = 0
     for group in groups:
         note("duplicate_questions", group[0])
-        by_options: dict[frozenset[str], set[str]] = defaultdict(set)
+        by_options: dict[frozenset[str], list[str]] = defaultdict(list)
         for it in group:
             key = frozenset(normalise(o) for o in it.options)
-            by_options[key].add(normalise(it.answer_text))
-        if any(len(answers) > 1 for answers in by_options.values()):
+            by_options[key].append(normalise(it.answer_text))
+        repeated += sum(1 for answers in by_options.values() if len(answers) > 1)
+        if any(len(set(answers)) > 1 for answers in by_options.values()):
             conflicting += 1
             note("conflicting_duplicates", group[0])
 
@@ -90,6 +92,7 @@ def hygiene(items: Sequence[Item], *, max_examples: int = 5) -> HygieneReport:
         empty_options=empty,
         duplicate_question_groups=len(groups),
         duplicate_question_items=sum(len(g) for g in groups),
+        duplicate_item_groups=repeated,
         conflicting_duplicates=conflicting,
         answer_in_question=in_q,
         answer_only_in_question=only_in_q,
